@@ -5,12 +5,14 @@
     Made by O-Despo"""
 
 import os
+import time
 import logging
 import requests
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
 logging.basicConfig(filename="./logs/trending_pull.log", encoding="utf-8", level=logging.DEBUG)
+logging.debug("Time Started %s: %d", time.ctime(), time.time())
 
 TW_ENDPOINT = "https://api.twitter.com/1.1/trends"
 TW_ENDPOINT_PLACES = TW_ENDPOINT + "/place.json"
@@ -35,9 +37,12 @@ if code > 300 or code < 199:
     logging.error("API request failed with code %d", code)
 
 response_json = response.json()
+response_json[0]['time'] = time.ctime()
 
 try:
     col.insert_many(response_json)
     logging.debug("Sucsess with code %d", code)
 except:
     logging.error("Failed: mongo insert failed withe err")
+
+logging.debug("Time Finished %s: %d", time.ctime(), time.time())
