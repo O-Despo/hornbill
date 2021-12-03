@@ -1,0 +1,3 @@
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): api.twitter.com:443
+DEBUG:urllib3.connectionpool:https://api.twitter.com:443 "GET /1.1/trends/place.json?id=23424977 HTTP/1.1" 200 1209
+DEBUG:root:Sucsess with code 200
