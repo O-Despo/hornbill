@@ -1,44 +1,27 @@
-
-from matplotlib.pyplot import text
 import tensorflow as tf
-import tensorflow_datasets as tfds
 import tensorflow
+from tensorflow import tfdf
 import numpy as np
+import pandas as pd
 import csv
 
 BUFFER_SIZE = 10000
 BATCH_SIZE = 1024
 VOCAB_SIZE = 1000
 
-URL_REGEX = "https?\S*"
-
-
-#Data preprocessing
-def cleanTweets(input_text):
-    input_text = tf.strings.lower(input_text)
-    input_text = tf.strings.regex_replace(input_text, "(@.*?)", " USERAT ", replace_global=True)
-    return tf.strings.regex_replace(input_text, URL_REGEX, " URL ", replace_global=True)
-
-train_db, test_db = tfds.load('sentiment140', split=['train[45%:55%]', 'test'], data_dir='./DNN/sentiment140', as_supervised=True)
-
-train_db = train_db.map(lambda x, y: (x, tf.math.round(y/4)))
-test_db = test_db.map(lambda x, y: (x, tf.math.round(y/4)))
+train_db = pd.read_csv('./Data/sent140-train.csv', names=['score', 'tweet'])
+test_db = pd.read_csv('./Data/sent140-test.csv', names=['score', 'tweet'])
 
 train_db = train_db.shuffle(BUFFER_SIZE)
 train_db = train_db.batch(BATCH_SIZE)
-test_db = test_db.batch(BATCH_SIZE)
 
 text_encode = tf.keras.layers.TextVectorization(
     max_tokens=VOCAB_SIZE,
-    standardize=cleanTweets,
     output_mode='int',
     output_sequence_length=100
 )
 
-text_encode.compile(run_eagerly=True)
-text_encode.adapt(train_db.map(lambda tweet, polarity: tweet))
 
-print(text_encode.call(['@LettyA ahh ive always wanted to see rent  love the soundtrack!!']))
 #Model
 print(text_encode.get_vocabulary())
 model = tf.keras.Sequential([
