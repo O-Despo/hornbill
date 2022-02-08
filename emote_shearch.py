@@ -1,45 +1,47 @@
 """emote_pull:
     Script that collects tweets based on the emojis in the tweet.
     Made by O-Despo"""
+import json
+from dotenv.main import load_dotenv
+import twitter_api_client
 
-import os
-import time
-import logging
-import requests
-from dotenv import load_dotenv
-from pymongo import MongoClient
-
-logging.basicConfig(filename="./logs/emote_pull.log", encoding="UTF-8", level=logging.DEBUG)
-logging.debug("Time Started %s: %d", time.ctime(), time.time())
-
-TW_ENDPOINT = "https://api.twitter.com"
-TW_ENDPOINT_PLACES = TW_ENDPOINT + "/2/tweets/search/recent"
-TW_US_ID = '23424977'
+US_WOEID = 23424977
 
 load_dotenv()
 
-# Start mongo connection
-client = MongoClient(os.getenv('MONGO'))
-db = client[os.getenv('MONGO_DB')]
-col = db[os.getenv('MONGO_COL_TRENDS')]
+def runQuerys(input_query, api_client):
+    happy_query = f'(😁 OR 😀 OR 🤗 OR 😺 OR 😆 OR 😃 OR 🙂 OR 🤩 OR 😆) {input_query} lang:en'
+    sad_query = f'(😭 OR 😢 OR 😔 OR ☹️ OR 😟 OR 😥) {input_query} lang:en'
+    
+    happy_params = {'query': happy_query, 'max_results': 10}
+    sad_params = {'query': sad_query, 'max_results': 10}
+    
+    params = {
+        "happy": happy_params, 
+        "sad": sad_params
+        }
+    
+    for param in params.items():
+        json_resp = api_client.call_one(param[1], search_endpoint, mongo_col="emote_querys")
 
-# API
-Headers = {'Authorization': os.getenv('TOKEN')}
-Params = {'id': TW_US_ID, 'query': emote_query}
+TW_ENDPOINT = "https://api.twitter.com"   
 
-response = requests.get(TW_ENDPOINT_PLACES, params=Params, headers=Headers)
+client = MongoClient(os.getenv('MONGO'))  
+db = client[os.getenv('MONGO_DB')]  
 
-code = response.status_code
-if 199 < response.status_code > 300:
-    logging.error("API request failed with code %d", code)
+default_col = os.getenv('MONGO_COL_TRENDS')  
 
-response_json = response.json()
-response_json[0]['time'] = time.ctime()
+trending_endpoint = "/1.1/trends/place.json"
+search_endpoint = "/2/tweets/search/recent"
 
-try:
-    col.insert_many(response_json)
-    logging.debug("Sucsess with code %d", code)
-except:
-    logging.error("Failed: mongo insert failed withe err")
+api_client = twitter_api_client.client(__name__)
 
-logging.debug("Time Finished %s: %d", time.ctime(), time.time())
+# Trending hashtags
+trends_params = {'id': US_WOEID}
+trends_json = api_client.call_one(trends_params, trending_endpoint, mongo_col="trends_v2")
+
+trending_querys = [trend['name'] for trend in trends_json[0]["trends"]]
+# Happy and sad query
+
+for query in [trending_querys[4]]:
+    runQuerys(query, api_client)
