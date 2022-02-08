@@ -52,7 +52,11 @@ trending_querys = [trend['name'] for trend in trends_json[0]["trends"]]
 
 for trend_query in [trending_querys[4]]:
     all_querys_json = runQuerys(trend_query, api_client)
-    db['emote_query_resp'].insert_one(all_querys_json)
+    db['emote_query_resp'].insert_one(all_querys_json.copy())
     
-    #for tweet_obj in all_querys_json:
-
+    for query_group in all_querys_json.items():
+        for tweet in query_group[1]['data']:
+            db['tweets'].insert_one({'tweet_id': tweet['id'],
+                    'text': tweet['text'],
+                    'class': query_group[0]
+                })
