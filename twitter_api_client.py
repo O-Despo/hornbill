@@ -16,6 +16,8 @@ class client():
         """Auth defaults to dotenv, temp_endpoint is the default endpoint used"""
         load_dotenv()
 
+        self.TW_ENDPOINT = "https://api.twitter.com"
+
         if log_file:
             log_file = log_file
         else:
@@ -36,20 +38,9 @@ class client():
         logging.basicConfig(filename=log_file, encoding="UTF-8", level=logging.DEBUG)
         logging.debug("Client Started by %s at %s: %d", script_name, time.ctime(), time.time())
 
-        breakpoint()
-        self.TW_ENDPOINT = "https://api.twitter.com"
-             
-        client = MongoClient(os.getenv('MONGO'))
-        self.db = client[os.getenv('MONGO_DB')]
 
-        self.default_col = os.getenv('MONGO_COL_TRENDS')
-
-
-
-    def call_one(self, params, sub_endpoint=False, insert=True, mongo_col=False):
+    def call_one(self, params, sub_endpoint=False, insert=True):
         logging.debug("Call Started %s: %d", time.ctime(), time.time())
-
-        if mongo_col == False: mongo_col = self.default_col
 
         if sub_endpoint:
             one_call_endpoint = self.TW_ENDPOINT + sub_endpoint
@@ -63,20 +54,9 @@ class client():
             logging.error("API request failed with code %d", code)
 
         response_json = response.json()
-        return_json = response_json.copy()
-
-        if insert:
-            if type(response_json) == list: 
-                if len(response_json) == 1:
-                    response_json = response_json[0]
-                else:
-                    response_json = {'data': response_json}
-            
-            self.db[mongo_col].insert_one(response_json)
-            logging.debug("Success: Mongo insert success")
 
         logging.debug("Call finished %s: %s", time.ctime(), time.time())
-        return return_json 
+        return response_json 
 
     def many_call(self, params_list, sub_endpoint = False, insert = True):
         """Enables making many calls to the twitter api"""
