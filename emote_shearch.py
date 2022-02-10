@@ -4,11 +4,12 @@
 import json
 import time
 import os
-from dotenv.main import load_dotenv
+from dotenv import load_dotenv
 from pymongo import MongoClient, mongo_client
 import twitter_api_client
 
 US_WOEID = 23424977
+HOURS_UNTIL_RECALL = 6
 
 load_dotenv()
 
@@ -66,29 +67,58 @@ api_client = twitter_api_client.client(__name__)
 trends_params = {'id': US_WOEID}
 trends_json = api_client.call_one(trends_params, trending_endpoint)
 
+# Open trend hits json
+if os.path.isfile('./trend_hits.json') == False:
+    trend_hits = open('./trend_hits.json', 'x')
+    trend_hits.close()
+    trend_hits_dict = {}
+else:
+    trend_hits_dict = json.load(open('./trend_hits.json', 'r'))
+
+# Inserts trends into Mongo
 db['tends_v2'].insert_one(trends_json[0])
 
 trending_search_terms = [trend['name'] for trend in trends_json[0]["trends"]]
-# Happy and sad query
 
 for trend_search_term in trending_search_terms:
-    emote_query_response = runEmoteQuerys(trend_search_term, emotion_to_querys_dict, api_client)
-
-    db['emote_query_resp'].insert_one(emote_query_response.copy())
+    #Check if trends has been hit in last time interval
     
-    for emote_group, query_results_list in emote_query_response.items():
-        emote_groups_tweets = []
+    if trend_search_term in trend_hits_dict.keys():
+        epoch_last_call = trend_hits_dict[trend_search_term]
+        hours_since_call = int((time.time() - epoch_last_call) / 3600)
 
-        for query_results in query_results_list:
-            if query_results['meta']['result_count'] == 0: continue
-
-            for tweet in query_results['data']:
-                    emote_groups_tweets.append({'tweet_id': tweet['id'],
-                        'text': tweet['text'],
-                        'class': emote_group,
-                        'search_term': trend_search_term,
-                        'author_id': tweet['author_id'],
-                        'time_of_process': time.time()
-                    })
+        if hours_since_call > HOURS_UNTIL_RECALL: hit_trend = True
+        else: hit_trend = False 
+    else:
+        hit_trend = True
     
-    db['tweets'].insert_many(emote_groups_tweets)
+    if hit_trend:
+        #Emote querys
+        emote_query_response = runEmoteQuerys(trend_search_term, emotion_to_querys_dict, api_client)
+
+        for emote_group, query_results_list in emote_query_response.items():
+            emote_groups_tweets = []
+
+            for query_results in query_results_list:
+                if query_results['meta']['result_count'] == 0: continue
+
+                for tweet in query_results['data']:
+                        emote_groups_tweets.append({'tweet_id': tweet['id'],
+                            'text': tweet['text'],
+                            'class': emote_group,
+                            'search_term': trend_search_term,
+                            'author_id': tweet['author_id'],
+                            'time_of_process': time.time()
+                        })
+        
+        db['tweets'].insert_many(emote_groups_tweets)
+
+        # Modify trend_hits
+        trend_hits_dict[trend_search_term] = time.time()
+
+    else: 
+        twitter_api_client.logging.info(f"ignored {trend_search_term} at {time.time()}")
+
+    trend_hits_file = open('./trend_hits.json', 'w+')
+    json.dump(trend_hits_dict, trend_hits_file)
+
