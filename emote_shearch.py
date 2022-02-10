@@ -15,15 +15,21 @@ load_dotenv()
 EXPANTIONS = 'author_id'
 
 happy_base_querys = [
-            '😁 OR 😀 OR 🤗',
-            '😺 OR 😆 OR 😃 OR 🙂 OR 🤩 OR 😆'
+            '😁'
+            '😀',
+            '🤗',
+            '😆',
+            '😃',
+            '🙂'
         ]
 
 sad_base_querys = [
             '😭',
             '😭',
             '😔',
-            '😥'
+            '😥',
+            '😞',
+            '☹️'
         ]
 
 emotion_to_querys_dict = {
