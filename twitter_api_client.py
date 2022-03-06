@@ -21,7 +21,7 @@ class client():
         if log_file:
             log_file = log_file
         else:
-            log_file = f'./logs/{script_name}.log'
+            log_file = f'./logs/twitter-api.log'
 
         if os.path.isfile(log_file) == False:
             file = open(log_file, 'w+')
@@ -35,13 +35,11 @@ class client():
         else:
             self.Headers = {'Authorization': os.getenv('TOKEN')}
         
-        logging.basicConfig(filename=log_file, encoding="UTF-8", level=logging.DEBUG)
+        logging.basicConfig(filename=log_file, level=logging.DEBUG)
         logging.debug("Client Started by %s at %s: %d", script_name, time.ctime(), time.time())
 
 
     def call_one(self, params, sub_endpoint=False, insert=True):
-        logging.debug("Call Started %s: %d", time.ctime(), time.time())
-
         if sub_endpoint:
             one_call_endpoint = self.TW_ENDPOINT + sub_endpoint
         else:
@@ -51,11 +49,10 @@ class client():
 
         code = response.status_code
         if 199 < response.status_code > 300:
-            logging.error("API request failed with code %d", code)
+            logging.error("API request failed with code %d content %s", code, one_call_endpoint)
 
         response_json = response.json()
 
-        logging.debug("Call finished %s: %s", time.ctime(), time.time())
         return response_json 
 
     def many_call(self, params_list, sub_endpoint = False, insert = True):

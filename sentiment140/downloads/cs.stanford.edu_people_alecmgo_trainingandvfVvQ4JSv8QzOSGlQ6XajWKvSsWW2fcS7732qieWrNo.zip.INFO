@@ -1,0 +1,1 @@
+{"dataset_names": ["sentiment140"], "original_fname": "trainingandtestdata.zip", "url_info": {"checksum": "004a3772c8a7ff9bbfeb875880f47f0679d93fc63e5cf9cff72d54a8a6162e57", "filename": "trainingandtestdata.zip", "size": 81363704}, "urls": ["http://cs.stanford.edu/people/alecmgo/trainingandtestdata.zip"]}
