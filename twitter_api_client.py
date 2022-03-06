@@ -21,7 +21,7 @@ class client():
         if log_file:
             log_file = log_file
         else:
-            log_file = f'./logs/twitter-api.log'
+            log_file = f'./logs/twitter-api-testing-v2.log'
 
         if os.path.isfile(log_file) == False:
             file = open(log_file, 'w+')
