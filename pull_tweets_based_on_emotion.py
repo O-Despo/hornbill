@@ -100,7 +100,7 @@ def get_trends(api_client, cap):
 def run_query(query, api_client):
     search_endpoint = "/2/tweets/search/recent"
 
-    query = {"query": f"{query['query']} lang:en"}
+    query = {"query": f"{query['query']} lang:en", "max_results": 100}
     query_resp = api_client.call_one(query, search_endpoint)
 
     return query_resp 
@@ -130,7 +130,12 @@ for query_obj_list in trend_qry_gen:
             sys.exit()
 
         #Extra data
-        hornbill_db['extra_data'].insert_one({'type': 'len', 'len': query_resp['meta']['result_count'] })
+        hornbill_db['extra_data'].insert_one(
+            {'type': 'len', 
+            'len': query_resp['meta']['result_count'],
+            'emoji': query['emoji'],
+            'trend': query['trend']
+            })
         data = query_resp['data']
 
         for tweet in data:
