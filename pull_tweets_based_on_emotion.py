@@ -5,6 +5,16 @@ import time
 import os
 import sys
 import json
+import logging
+
+logging.basicConfig(filename='pull_tweets_based_on_emotion.log', level=logging.DEBUG)
+
+load_dotenv()
+db_client = MongoClient(os.getenv('MONGO'))
+hornbill_db = db_client['hornbill_v2']
+
+logging.debug("Run started TIME: %s : %i" % (time.ctime(), time.time()))
+logging.debug("Number of tweets at start: %i",hornbill_db['tweets_2'].count_documents({}))
 
 api_client = twitter_api_client.client(__name__)
 
@@ -14,14 +24,16 @@ queries_base = {
             '😀',
             '😆',
             '😃',
-            '🙂'
+            '❤️',
+            '😄',
         ],
 "sad":[
             '😭',
-            '😭',
+            '😢',
             '😥',
             '😞',
-            '☹️']
+            '☹️',
+            '😡']
 }
 
 def assemble_queries(queries_base):
@@ -46,12 +58,11 @@ def assemble_queries(queries_base):
 
     return final_query_list
 
-NUMBER_OF_TRENDS = 37
+NUMBER_OF_TRENDS = 25
 
 def get_trends(api_client, cut_off):
     """Retrives a list of currect trends and returns a concatated form"""
     US_WOEID = 23424977
-    EXPANTIONS = 'author_id'
     trending_endpoint = "/1.1/trends/place.json"
     
     trends_params = {'id': US_WOEID}
@@ -106,25 +117,22 @@ def run_query(query, api_client):
     return query_resp 
 
 assembled_emoji_qrys = assemble_queries(queries_base)
-trend_list, trend_pure_json = get_trends(api_client, 10)
+trend_list, trend_pure_json = get_trends(api_client, 25)
 trend_qry_gen = trend_query_genertor(assembled_emoji_qrys, trend_list)
-
-load_dotenv()
-db_client = MongoClient(os.getenv('MONGO'))
-hornbill_db = db_client['hornbill_v2_test']
 
 trend_id = hornbill_db['trend_pure_json'].insert_one(trend_pure_json[0])
 
 for query_obj_list in trend_qry_gen:
-
+    logging.debug("Got Trend %s at TIME: %s : %i" % (query_obj_list[0]['trend'], time.ctime(), time.time()))
     for query in query_obj_list: 
+
         tweets_bulk = []
 
         query_resp = run_query(query, api_client)
 
         #Check for "to many request error"
         if 'status' in query_resp.keys() and query_resp['status'] == 429:
-            twitter_api_client.logging.error(f"to many requets at {time.time()}")
+            logging.error("to many requets at TIME: %s : %i" % (time.ctime(), time.time()))
             sys.exit()
         elif query_resp['meta']['result_count'] == 0:
             sys.exit()
@@ -143,6 +151,7 @@ for query_obj_list in trend_qry_gen:
                 'text': tweet['text'],
                 'tweet_id': tweet['id'],
                 'emotion': query['emotion'],
+                'word_count': tweet['text'].count(' ') + 1,
                 'trend': query['trend'],
                 'time': time.time(),
                 'query_id': trend_id.inserted_id,
@@ -151,6 +160,6 @@ for query_obj_list in trend_qry_gen:
             }
 
             hornbill_db['tweets'].insert_one(tweet_json)
-        
 
-
+logging.debug("Number of tweets at finish: %i", hornbill_db['tweets'].count_documents({}))
+logging.debug("Run finished at %s : %i" % (time.ctime(), time.time()))
